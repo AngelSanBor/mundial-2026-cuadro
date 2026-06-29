@@ -302,7 +302,7 @@
   </div>
   <div class="legend-foot">
     Cruces de Dieciseisavos confirmados por FIFA al cierre de la fase de grupos (27 jun 2026).<br>
-    Los cruces de 8vos en adelante son orientativos (orden de cuadro); pídeme &ldquo;actualiza el Mundial&rdquo; en el chat y te paso el HTML actualizado para reemplazar este archivo en tu repositorio.<br>
+    Cruces de Dieciseisavos a Final según la estructura oficial del cuadro FIFA (sorteo dic. 2025, partidos 73-104). Si detectas algún cruce incorrecto avísame y lo reviso.<br>
     Horarios en hora de España (CEST). Los resultados se guardan en este navegador — usa &ldquo;Copiar respaldo&rdquo; para llevarlos a otro dispositivo.
   </div>
 </footer>
@@ -370,8 +370,13 @@
     }
     return out;
   }
-  var r32Ids = R32.map(function(_,i){return "m"+i;});
-  var r16Ids = pairUp(r32Ids,"r16").map(function(m){return m.id;});
+  var r32Ids = R32.map(function(_,i){return "m"+i;}); // orden cronológico, solo para el listado por día
+  // Orden REAL del cuadro FIFA (partidos 73-104, sorteo dic. 2025 + cierre fase de grupos 27/06/2026):
+  // P89=Ganador74+77, P90=Ganador73+75, P91=Ganador76+78, P92=Ganador79+80,
+  // P93=Ganador83+84, P94=Ganador81+82, P95=Ganador86+88, P96=Ganador85+87,
+  // P97=G89+90, P98=G93+94 → P101 (semi, Dallas) | P99=G91+92, P100=G95+96 → P102 (semi, Atlanta)
+  var bracketOrder = ["m2","m5","m0","m3","m11","m10","m9","m8","m1","m4","m6","m7","m14","m13","m12","m15"];
+  var r16Ids = pairUp(bracketOrder,"r16").map(function(m){return m.id;});
   var qfIds  = pairUp(r16Ids,"qf").map(function(m){return m.id;});
   var sfIds  = pairUp(qfIds,"sf").map(function(m){return m.id;});
   var finIds = pairUp(sfIds,"fin").map(function(m){return m.id;});
@@ -535,7 +540,7 @@
     }
     var note = "";
     if(roundKey!=="r32"){
-      note = '<div class="note">Emparejamientos orientativos según el orden del cuadro. Te lo iré afinando con los cruces oficiales reales conforme termine cada ronda.</div>';
+      note = '<div class="note">Cruces según la estructura oficial del cuadro FIFA (partidos 89-104, sorteo dic. 2025). El equipo en cada casilla se confirma cuando termina el partido anterior correspondiente.</div>';
     }
     var body = "";
     if(roundKey==="r32"){
@@ -568,7 +573,7 @@
   function bracketSVG(){
     var boxW=128, boxH=44, rowH=64, colGap=40, topMargin=54;
     var stepX = boxW+colGap;
-    var leftR32=r32Ids.slice(0,8), rightR32=r32Ids.slice(8,16);
+    var leftR32=bracketOrder.slice(0,8), rightR32=bracketOrder.slice(8,16);
     var leftR16=r16Ids.slice(0,4), rightR16=r16Ids.slice(4,8);
     var leftQF=qfIds.slice(0,2), rightQF=qfIds.slice(2,4);
     var leftSF=sfIds[0], rightSF=sfIds[1];
