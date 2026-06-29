@@ -66,6 +66,11 @@
   .hero h1{font-size:clamp(34px,9vw,52px); font-weight:700; color:var(--chalk); text-shadow:0 3px 0 rgba(0,0,0,.25);}
   .hero .sub{font-size:13px; letter-spacing:.12em; color:var(--chalk-dim); margin-top:6px;}
   .hero .flags{font-size:22px; margin-top:10px; letter-spacing:6px;}
+  .flagimg{height:22px; width:auto; vertical-align:middle; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.18);}
+  .flagph{font-size:20px; opacity:.6;}
+  .hero .flags .flagimg{height:24px; margin:0 5px;}
+  .live-chip .flagimg{height:15px; box-shadow:0 0 0 1px rgba(0,0,0,.3);}
+  .champion .flagimg{height:60px; box-shadow:0 0 0 2px rgba(255,255,255,.45); border-radius:5px;}
   .live-chip{
     display:inline-flex; align-items:center; gap:8px;
     margin-top:18px; padding:9px 16px;
@@ -127,6 +132,24 @@
     background:rgba(0,0,0,.22); border:1px dashed rgba(255,255,255,.25);
     border-radius:10px; padding:10px 12px; margin-bottom:14px;
   }
+  /* ---------- CROQUIS (bracket SVG) ---------- */
+  .bracket-scroll{
+    overflow-x:auto; padding:6px 14px 26px; -webkit-overflow-scrolling:touch;
+  }
+  .bracket-scroll svg{display:block;}
+  .bx-rect{fill:var(--chalk); stroke:rgba(10,46,28,.25); stroke-width:1;}
+  .bx-rect.pending{fill:rgba(255,255,255,.08); stroke:rgba(255,255,255,.25);}
+  .bx-rect.decided{fill:#fbf6e6; stroke:var(--gold); stroke-width:1.4;}
+  .bx-rect.final{fill:#fbf6e6; stroke:var(--gold); stroke-width:2;}
+  .bx-line{stroke:rgba(244,247,242,.35); stroke-width:1.5; fill:none;}
+  .bx-name{font-family:'Oswald',sans-serif; font-size:11.5px; font-weight:600; fill:var(--ink);}
+  .bx-name.ph{fill:var(--ink-soft); font-style:italic; font-weight:500; font-size:10px;}
+  .bx-name.win{fill:#155a2c;}
+  .bx-name.lose{fill:#9aa39a; text-decoration:line-through;}
+  .bx-divider{stroke:var(--chalk-dim); stroke-width:1;}
+  .bx-roundlabel{font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:.1em; fill:var(--gold-soft); text-anchor:middle; text-transform:uppercase;}
+  .bx-trophy{font-size:30px; text-anchor:middle;}
+  .bx-finallabel{font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.15em; fill:var(--chalk); text-anchor:middle; font-weight:700;}
   /* ---------- MATCH CARD (ticket stub) ---------- */
   .card{
     position:relative;
@@ -156,7 +179,7 @@
   .team-row{
     display:flex; align-items:center; gap:10px; padding:7px 0;
   }
-  .team-row .flag{font-size:22px; width:30px; text-align:center;}
+  .team-row .flag{width:30px; text-align:center;}
   .team-row .name{flex:1; font-family:'Oswald',sans-serif; font-size:15.5px; font-weight:600; letter-spacing:.01em;}
   .team-row.placeholder .name{color:var(--ink-soft); font-style:italic; font-weight:500; font-size:13.5px;}
   .team-row.winner .name{color:#155a2c;}
@@ -213,7 +236,7 @@
   .champion .trophy{font-size:46px;}
   .champion h2{font-size:15px; letter-spacing:.2em; color:var(--gold-soft);}
   .champion .name{font-size:clamp(28px,8vw,40px); color:#fff; margin-top:6px; font-weight:700;}
-  .champion .flagbig{font-size:54px; display:block; margin-top:6px;}
+  .champion .flagbig{display:block; margin-top:6px;}
   /* ---------- FOOTER ---------- */
   footer{max-width:560px; margin:34px auto 0; padding:0 14px; text-align:center;}
   footer .btn-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap;}
@@ -242,17 +265,30 @@
   <div class="hosts">ESTADOS UNIDOS · MÉXICO · CANADÁ</div>
   <h1>Mundial 2026</h1>
   <div class="sub">CUADRO DE CRUCES — DIECISEISAVOS A LA FINAL</div>
-  <div class="flags">🇺🇸 🇲🇽 🇨🇦</div>
+  <div class="flags">
+    <img class="flagimg" src="https://flagcdn.com/h40/us.png" alt="">
+    <img class="flagimg" src="https://flagcdn.com/h40/mx.png" alt="">
+    <img class="flagimg" src="https://flagcdn.com/h40/ca.png" alt="">
+  </div>
   <div id="liveChip"></div>
 </div>
 
 <nav class="roundnav" id="roundnav">
+  <button data-target="croquis">Croquis</button>
   <button data-target="r32">16avos</button>
   <button data-target="r16">8vos</button>
   <button data-target="qf">4tos</button>
   <button data-target="sf">Semis</button>
   <button data-target="fin">Final</button>
 </nav>
+
+<section class="round" id="croquis">
+  <div class="round-head" style="max-width:560px;margin:18px auto 14px;padding:0 14px 8px;">
+    <span class="tag" style="background:#d4af37;">Croquis</span>
+    <span class="count">Cuadro completo de un vistazo</span>
+  </div>
+  <div class="bracket-scroll" id="bracketScroll"></div>
+</section>
 
 <main id="app">
   <div class="loading">Cargando cuadro…</div>
@@ -278,40 +314,45 @@
   "use strict";
 
   // ---------- DATA: Dieciseisavos confirmados ----------
+  // cc = código de país (para la imagen de bandera), code = código corto FIFA (para el croquis)
   var R32 = [
     {day:"Domingo 28 de junio", iso:"2026-06-28", time:"21:00", venue:"Los Ángeles · SoFi Stadium",
-      home:{name:"Sudáfrica",flag:"🇿🇦"}, away:{name:"Canadá",flag:"🇨🇦"}},
+      home:{name:"Sudáfrica",cc:"za",code:"RSA"}, away:{name:"Canadá",cc:"ca",code:"CAN"}},
     {day:"Lunes 29 de junio", iso:"2026-06-29", time:"19:00", venue:"Houston",
-      home:{name:"Brasil",flag:"🇧🇷"}, away:{name:"Japón",flag:"🇯🇵"}},
+      home:{name:"Brasil",cc:"br",code:"BRA"}, away:{name:"Japón",cc:"jp",code:"JPN"}},
     {day:"Lunes 29 de junio", iso:"2026-06-29", time:"22:30", venue:"Boston · Gillette Stadium",
-      home:{name:"Alemania",flag:"🇩🇪"}, away:{name:"Paraguay",flag:"🇵🇾"}},
+      home:{name:"Alemania",cc:"de",code:"GER"}, away:{name:"Paraguay",cc:"py",code:"PAR"}},
     {day:"Martes 30 de junio", iso:"2026-06-30", time:"03:00 (madrugada)", venue:"Monterrey · Estadio BBVA",
-      home:{name:"Países Bajos",flag:"🇳🇱"}, away:{name:"Marruecos",flag:"🇲🇦"}},
+      home:{name:"Países Bajos",cc:"nl",code:"NED"}, away:{name:"Marruecos",cc:"ma",code:"MAR"}},
     {day:"Martes 30 de junio", iso:"2026-06-30", time:"19:00", venue:"Dallas",
-      home:{name:"Costa de Marfil",flag:"🇨🇮"}, away:{name:"Noruega",flag:"🇳🇴"}},
+      home:{name:"Costa de Marfil",cc:"ci",code:"CIV"}, away:{name:"Noruega",cc:"no",code:"NOR"}},
     {day:"Martes 30 de junio", iso:"2026-06-30", time:"23:00", venue:"Nueva Jersey · MetLife Stadium",
-      home:{name:"Francia",flag:"🇫🇷"}, away:{name:"Suecia",flag:"🇸🇪"}},
+      home:{name:"Francia",cc:"fr",code:"FRA"}, away:{name:"Suecia",cc:"se",code:"SWE"}},
     {day:"Miércoles 1 de julio", iso:"2026-07-01", time:"03:00 (madrugada)", venue:"Ciudad de México",
-      home:{name:"México",flag:"🇲🇽"}, away:{name:"Ecuador",flag:"🇪🇨"}},
+      home:{name:"México",cc:"mx",code:"MEX"}, away:{name:"Ecuador",cc:"ec",code:"ECU"}},
     {day:"Miércoles 1 de julio", iso:"2026-07-01", time:"18:00", venue:"Atlanta",
-      home:{name:"Inglaterra",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"}, away:{name:"RD del Congo",flag:"🇨🇩"}},
+      home:{name:"Inglaterra",cc:"gb-eng",code:"ENG"}, away:{name:"RD del Congo",cc:"cd",code:"COD"}},
     {day:"Miércoles 1 de julio", iso:"2026-07-01", time:"22:00", venue:"Seattle",
-      home:{name:"Bélgica",flag:"🇧🇪"}, away:{name:"Senegal",flag:"🇸🇳"}},
+      home:{name:"Bélgica",cc:"be",code:"BEL"}, away:{name:"Senegal",cc:"sn",code:"SEN"}},
     {day:"Jueves 2 de julio", iso:"2026-07-02", time:"02:00 (madrugada)", venue:"San Francisco · Levi's Stadium",
-      home:{name:"Estados Unidos",flag:"🇺🇸"}, away:{name:"Bosnia y Herzegovina",flag:"🇧🇦"}},
+      home:{name:"Estados Unidos",cc:"us",code:"USA"}, away:{name:"Bosnia y Herzegovina",cc:"ba",code:"BIH"}},
     {day:"Jueves 2 de julio", iso:"2026-07-02", time:"21:00", venue:"Los Ángeles · SoFi Stadium",
-      home:{name:"España",flag:"🇪🇸"}, away:{name:"Austria",flag:"🇦🇹"}},
+      home:{name:"España",cc:"es",code:"ESP"}, away:{name:"Austria",cc:"at",code:"AUT"}},
     {day:"Viernes 3 de julio", iso:"2026-07-03", time:"01:00 (madrugada)", venue:"Toronto · BMO Field",
-      home:{name:"Portugal",flag:"🇵🇹"}, away:{name:"Croacia",flag:"🇭🇷"}},
+      home:{name:"Portugal",cc:"pt",code:"POR"}, away:{name:"Croacia",cc:"hr",code:"CRO"}},
     {day:"Viernes 3 de julio", iso:"2026-07-03", time:"05:00 (madrugada)", venue:"Vancouver · BC Place",
-      home:{name:"Suiza",flag:"🇨🇭"}, away:{name:"Argelia",flag:"🇩🇿"}},
+      home:{name:"Suiza",cc:"ch",code:"SUI"}, away:{name:"Argelia",cc:"dz",code:"ALG"}},
     {day:"Viernes 3 de julio", iso:"2026-07-03", time:"20:00", venue:"Dallas",
-      home:{name:"Australia",flag:"🇦🇺"}, away:{name:"Egipto",flag:"🇪🇬"}},
+      home:{name:"Australia",cc:"au",code:"AUS"}, away:{name:"Egipto",cc:"eg",code:"EGY"}},
     {day:"Sábado 4 de julio", iso:"2026-07-04", time:"00:00 (madrugada)", venue:"Miami",
-      home:{name:"Argentina",flag:"🇦🇷"}, away:{name:"Cabo Verde",flag:"🇨🇻"}},
+      home:{name:"Argentina",cc:"ar",code:"ARG"}, away:{name:"Cabo Verde",cc:"cv",code:"CPV"}},
     {day:"Sábado 4 de julio", iso:"2026-07-04", time:"03:30 (madrugada)", venue:"Kansas City",
-      home:{name:"Colombia",flag:"🇨🇴"}, away:{name:"Ghana",flag:"🇬🇭"}}
+      home:{name:"Colombia",cc:"co",code:"COL"}, away:{name:"Ghana",cc:"gh",code:"GHA"}}
   ];
+  function flagImg(cc, cls){
+    if(!cc) return '<span class="flagph">❔</span>';
+    return '<img class="flagimg'+(cls?(' '+cls):'')+'" src="https://flagcdn.com/h40/'+cc+'.png" alt="" loading="lazy">';
+  }
 
   var ROUND_LABEL = {r32:"Dieciseisavos", r16:"Octavos de final", qf:"Cuartos de final", sf:"Semifinales", fin:"Final"};
   var ROUND_TAG_COLOR = {r32:"#2f8a52", r16:"#2f9aa0", qf:"#d98c2b", sf:"#c0392b", fin:"#d4af37"};
@@ -406,11 +447,11 @@
     var decidedAndLoser = w && team && w.name!==team.name;
     var rowClass = "team-row" + (!team ? " placeholder" : "") + (isWinner ? " winner" : "") + (decidedAndLoser ? " loser" : "");
     var nameHTML = team ? team.name : ("Ganador " + prettySrcLabel(matchId, side));
-    var flag = team ? team.flag : "❔";
+    var flagHTML = team ? flagImg(team.cc) : '<span class="flagph">❔</span>';
     var inputDisabled = (!team || locked) ? "disabled" : "";
     return '' +
       '<div class="'+rowClass+'">' +
-        '<div class="flag">'+flag+'</div>' +
+        '<div class="flag">'+flagHTML+'</div>' +
         '<div class="name">'+nameHTML+'</div>' +
         (isWinner ? '<span class="winner-badge">🏆</span>' : '') +
         '<input class="score-input" type="number" min="0" max="20" inputmode="numeric" '+
@@ -448,8 +489,8 @@
       penHTML = '<div class="pens">' +
         '<p>Empate — ¿quién avanzó en la tanda de penales?</p>' +
         '<div class="opts">' +
-          '<button class="'+selA+'" data-pen="'+matchId+'" data-side="home">'+homeTeam.flag+' '+homeTeam.name+'</button>' +
-          '<button class="'+selB+'" data-pen="'+matchId+'" data-side="away">'+awayTeam.flag+' '+awayTeam.name+'</button>' +
+          '<button class="'+selA+'" data-pen="'+matchId+'" data-side="home">'+flagImg(homeTeam.cc)+' '+homeTeam.name+'</button>' +
+          '<button class="'+selB+'" data-pen="'+matchId+'" data-side="away">'+flagImg(awayTeam.cc)+' '+awayTeam.name+'</button>' +
         '</div></div>';
     }
 
@@ -478,8 +519,8 @@
   function liveChipHTML(){
     var todayMatch = R32.find(function(m){return m.iso===todayIso;});
     if(!todayMatch) return "";
-    return '<div class="live-chip"><span class="live-dot"></span> HOY · '+todayMatch.home.flag+' '+todayMatch.home.name+
-      ' vs '+todayMatch.away.name+' '+todayMatch.away.flag+' · '+todayMatch.time+'</div>';
+    return '<div class="live-chip"><span class="live-dot"></span> HOY · '+flagImg(todayMatch.home.cc)+' '+todayMatch.home.name+
+      ' vs '+todayMatch.away.name+' '+flagImg(todayMatch.away.cc)+' · '+todayMatch.time+'</div>';
   }
 
   function sectionHTML(roundKey, ids){
@@ -520,11 +561,117 @@
       '<div class="trophy">🏆</div>' +
       '<h2>Campeón del mundo 2026</h2>' +
       '<div class="name">'+champ.name+'</div>' +
-      '<span class="flagbig">'+champ.flag+'</span>' +
+      '<span class="flagbig">'+flagImg(champ.cc)+'</span>' +
     '</div>';
   }
 
+  function bracketSVG(){
+    var boxW=128, boxH=44, rowH=64, colGap=40, topMargin=54;
+    var stepX = boxW+colGap;
+    var leftR32=r32Ids.slice(0,8), rightR32=r32Ids.slice(8,16);
+    var leftR16=r16Ids.slice(0,4), rightR16=r16Ids.slice(4,8);
+    var leftQF=qfIds.slice(0,2), rightQF=qfIds.slice(2,4);
+    var leftSF=sfIds[0], rightSF=sfIds[1];
+    var finalM=finIds[0];
+
+    var yR32=[]; for(var i=0;i<8;i++){ yR32.push(topMargin + i*rowH + rowH/2); }
+    function avgPair(arr,i){ return (arr[2*i]+arr[2*i+1])/2; }
+    var yR16=[0,1,2,3].map(function(j){return avgPair(yR32,j);});
+    var yQF=[0,1].map(function(k){return avgPair(yR16,k);});
+    var ySF = (yQF[0]+yQF[1])/2;
+    var yFinal = ySF;
+
+    var xR32L=0, xR16L=stepX, xQFL=2*stepX, xSFL=3*stepX;
+    var xFinal=4*stepX; var finalW=boxW+24;
+    var xSFR=xFinal+finalW+colGap, xQFR=xSFR+stepX, xR16R=xQFR+stepX, xR32R=xR16R+stepX;
+    var totalW = xR32R+boxW+24;
+    var totalH = topMargin + 8*rowH + 24;
+
+    var els = [];
+
+    function teamLineHTML(matchId, side, x, yRow){
+      var team = resolveTeam(matchId, side);
+      var w = winnerOf(matchId);
+      var cls = "bx-name" + (!team ? " ph" : (w && team && w.name===team.name ? " win" : (w ? " lose" : "")));
+      var label = team ? team.code : "—";
+      var flagHTML = team ? '<image href="https://flagcdn.com/h20/'+team.cc+'.png" x="'+(x+8)+'" y="'+(yRow-5.5)+'" width="16" height="11"></image>' : "";
+      return flagHTML + '<text class="'+cls+'" x="'+(x+30)+'" y="'+(yRow+4)+'">'+label+'</text>';
+    }
+
+    function box(matchId, x, y){
+      var locked = !!winnerOf(matchId);
+      var homeTeam = resolveTeam(matchId,"home"), awayTeam = resolveTeam(matchId,"away");
+      var rectCls = locked ? "decided" : (!(homeTeam&&awayTeam) ? "pending" : "");
+      var top = y - boxH/2;
+      els.push('<rect class="bx-rect '+rectCls+'" x="'+x+'" y="'+top+'" width="'+boxW+'" height="'+boxH+'" rx="6"></rect>');
+      els.push('<line class="bx-divider" x1="'+x+'" y1="'+y+'" x2="'+(x+boxW)+'" y2="'+y+'"></line>');
+      els.push(teamLineHTML(matchId,"home", x, y-boxH/4+2));
+      els.push(teamLineHTML(matchId,"away", x, y+boxH/4+5));
+    }
+
+    function elbow(exitX, yA, yB, entryX){
+      var midX = (exitX+entryX)/2, yDest=(yA+yB)/2;
+      els.push('<line class="bx-line" x1="'+exitX+'" y1="'+yA+'" x2="'+midX+'" y2="'+yA+'"></line>');
+      els.push('<line class="bx-line" x1="'+exitX+'" y1="'+yB+'" x2="'+midX+'" y2="'+yB+'"></line>');
+      els.push('<line class="bx-line" x1="'+midX+'" y1="'+yA+'" x2="'+midX+'" y2="'+yB+'"></line>');
+      els.push('<line class="bx-line" x1="'+midX+'" y1="'+yDest+'" x2="'+entryX+'" y2="'+yDest+'"></line>');
+    }
+
+    function label(x,w,y,text){ els.push('<text class="bx-roundlabel" x="'+(x+w/2)+'" y="'+y+'">'+text+'</text>'); }
+
+    // round labels
+    label(xR32L,boxW,24,"16avos"); label(xR16L,boxW,24,"8vos"); label(xQFL,boxW,24,"4tos"); label(xSFL,boxW,24,"Semis");
+    label(xSFR,boxW,24,"Semis"); label(xQFR,boxW,24,"4tos"); label(xR16R,boxW,24,"8vos"); label(xR32R,boxW,24,"16avos");
+
+    // left side
+    leftR32.forEach(function(id,i){ box(id, xR32L, yR32[i]); });
+    leftR16.forEach(function(id,j){
+      box(id, xR16L, yR16[j]);
+      elbow(xR32L+boxW, yR32[2*j], yR32[2*j+1], xR16L);
+    });
+    leftQF.forEach(function(id,k){
+      box(id, xQFL, yQF[k]);
+      elbow(xR16L+boxW, yR16[2*k], yR16[2*k+1], xQFL);
+    });
+    box(leftSF, xSFL, ySF);
+    elbow(xQFL+boxW, yQF[0], yQF[1], xSFL);
+
+    // right side (mirrored)
+    rightR32.forEach(function(id,i){ box(id, xR32R, yR32[i]); });
+    rightR16.forEach(function(id,j){
+      box(id, xR16R, yR16[j]);
+      elbow(xR32R, yR32[2*j], yR32[2*j+1], xR16R+boxW);
+    });
+    rightQF.forEach(function(id,k){
+      box(id, xQFR, yQF[k]);
+      elbow(xR16R, yR16[2*k], yR16[2*k+1], xQFR+boxW);
+    });
+    box(rightSF, xSFR, ySF);
+    elbow(xQFR, yQF[0], yQF[1], xSFR+boxW);
+
+    // final
+    els.push('<line class="bx-line" x1="'+(xSFL+boxW)+'" y1="'+ySF+'" x2="'+xFinal+'" y2="'+yFinal+'"></line>');
+    els.push('<line class="bx-line" x1="'+xSFR+'" y1="'+ySF+'" x2="'+(xFinal+finalW)+'" y2="'+yFinal+'"></line>');
+    els.push('<text class="bx-trophy" x="'+(xFinal+finalW/2)+'" y="'+(yFinal-58)+'">🏆</text>');
+    els.push('<text class="bx-finallabel" x="'+(xFinal+finalW/2)+'" y="'+(yFinal-34)+'">FINAL</text>');
+    (function finalBox(){
+      var locked = !!winnerOf(finalM);
+      var homeTeam=resolveTeam(finalM,"home"), awayTeam=resolveTeam(finalM,"away");
+      var rectCls = locked ? "final decided" : ((homeTeam&&awayTeam) ? "final" : "pending");
+      var top = yFinal - boxH/2;
+      els.push('<rect class="bx-rect '+rectCls+'" x="'+xFinal+'" y="'+top+'" width="'+finalW+'" height="'+boxH+'" rx="6"></rect>');
+      els.push('<line class="bx-divider" x1="'+xFinal+'" y1="'+yFinal+'" x2="'+(xFinal+finalW)+'" y2="'+yFinal+'"></line>');
+      els.push(teamLineHTML(finalM,"home", xFinal, yFinal-boxH/4+2));
+      els.push(teamLineHTML(finalM,"away", xFinal, yFinal+boxH/4+5));
+    })();
+
+    return '<svg viewBox="0 0 '+totalW+' '+totalH+'" width="'+totalW+'" height="'+totalH+'" xmlns="http://www.w3.org/2000/svg">' +
+      els.join("") + '</svg>';
+  }
+
   function render(){
+    var bs = document.getElementById("bracketScroll");
+    if(bs) bs.innerHTML = bracketSVG();
     var app = document.getElementById("app");
     app.innerHTML =
       sectionHTML("r32", r32Ids) +
