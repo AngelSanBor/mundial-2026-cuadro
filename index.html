@@ -271,6 +271,7 @@
     <img class="flagimg" src="https://flagcdn.com/h40/ca.png" alt="">
   </div>
   <div id="liveChip"></div>
+  <div id="refreshWrap" style="margin-top:8px"></div>
 </div>
 
 <nav class="roundnav" id="roundnav">
@@ -521,11 +522,59 @@
       '</div>';
   }
 
+  function nextMatchData(){
+    var now = new Date();
+    var timeMap = {
+      "01:00":60,"02:00":120,"03:00":180,"03:30":210,
+      "05:00":300,"18:00":1080,"19:00":1140,"20:00":1200,
+      "21:00":1260,"22:00":1320,"22:30":1350,"23:00":1380
+    };
+    var candidates = R32.filter(function(m, idx){
+      if(winnerOf("m"+idx)) return false;
+      var timeStr = m.time.replace(" (madrugada)","");
+      var mins = timeMap[timeStr] !== undefined ? timeMap[timeStr] : 0;
+      // El ISO ya es el día real del partido incluso para los de madrugada
+      var parts = m.iso.split("-");
+      var matchDate = new Date(+parts[0], +parts[1]-1, +parts[2], Math.floor(mins/60), mins%60, 0, 0);
+      return matchDate > now;
+    });
+    if(candidates.length) return candidates[0];
+    var fallback = R32.filter(function(m,idx){ return !winnerOf("m"+idx); });
+    return fallback.length ? fallback[0] : null;
+  }
+
   function liveChipHTML(){
-    var todayMatch = R32.find(function(m){return m.iso===todayIso;});
-    if(!todayMatch) return "";
-    return '<div class="live-chip"><span class="live-dot"></span> HOY · '+flagImg(todayMatch.home.cc)+' '+todayMatch.home.name+
-      ' vs '+todayMatch.away.name+' '+flagImg(todayMatch.away.cc)+' · '+todayMatch.time+'</div>';
+    var m = nextMatchData();
+    if(!m){
+      return '<div class="live-chip" style="color:var(--gold-soft)"><span>🏆</span> ¡Fase de grupos completa!</div>';
+    }
+    var isToday = m.iso === localISODate(new Date());
+    var dayLabel = isToday ? 'HOY' : m.day;
+    var homeFlag = '<img style="height:16px;vertical-align:middle;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.3)" src="https://flagcdn.com/h20/'+m.home.cc+'.png" alt="">';
+    var awayFlag = '<img style="height:16px;vertical-align:middle;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.3)" src="https://flagcdn.com/h20/'+m.away.cc+'.png" alt="">';
+    return '<div class="live-chip">' +
+      '<span class="live-dot"></span>' +
+      '<span style="font-size:10.5px;letter-spacing:.08em;opacity:.7">PRÓXIMO · '+dayLabel+'</span>' +
+      ' &nbsp;' +
+      homeFlag+' <b>'+m.home.name+'</b>' +
+      ' <span style="opacity:.5;font-size:10px">vs</span> ' +
+      '<b>'+m.away.name+'</b> '+awayFlag +
+      ' &nbsp;<span style="color:var(--amber);font-size:11.5px">'+m.time+'</span>' +
+      '</div>';
+  }
+
+  function attachRefreshBtn(){
+    var btn = document.getElementById("refreshBtn");
+    if(!btn) return;
+    btn.onclick = function(){
+      btn.textContent = "↻ Actualizando…";
+      btn.disabled = true;
+      setTimeout(function(){
+        document.getElementById("liveChip").innerHTML = liveChipHTML();
+        btn.textContent = "↻ Actualizar próximo partido";
+        btn.disabled = false;
+      }, 400);
+    };
   }
 
   function sectionHTML(roundKey, ids){
@@ -686,6 +735,13 @@
       sectionHTML("fin", finIds) +
       championHTML();
     document.getElementById("liveChip").innerHTML = liveChipHTML();
+    var rw = document.getElementById("refreshWrap");
+    if(rw) rw.innerHTML = '<button id="refreshBtn" style="'+
+      'background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);'+
+      'color:var(--chalk-dim);border-radius:999px;padding:7px 16px;cursor:pointer;'+
+      'font-family:\'Oswald\',sans-serif;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;">'+
+      '↻ Actualizar próximo partido</button>';
+    attachRefreshBtn();
     attachHandlers();
   }
 
